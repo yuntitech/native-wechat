@@ -61,16 +61,15 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
 
     if (!registered) {
       compatRegisterReceiver(
-        context,
-        new BroadcastReceiver() {
-          @Override
-          public void onReceive(Context context, Intent intent) {
-            handleIntent((Intent)intent.getExtras().get("intent"));
-          }
-        },
-        new IntentFilter(REDIRECT_INTENT_ACTION),
-        true
-      );
+          context,
+          new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+              handleIntent((Intent) intent.getExtras().get("intent"));
+            }
+          },
+          new IntentFilter(REDIRECT_INTENT_ACTION),
+          true);
     }
   }
 
@@ -84,18 +83,16 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
    * @see https://github.com/react-native-share/react-native-share/issues/1463
    */
   private void compatRegisterReceiver(
-    Context context,
-    BroadcastReceiver receiver,
-    IntentFilter filter,
-    boolean exported
-  ) {
+      Context context,
+      BroadcastReceiver receiver,
+      IntentFilter filter,
+      boolean exported) {
     if (Build.VERSION.SDK_INT >= 34 &&
         context.getApplicationInfo().targetSdkVersion >= 34) {
       context.registerReceiver(
-        receiver,
-        filter,
-        exported ? Context.RECEIVER_EXPORTED : Context.RECEIVER_NOT_EXPORTED
-      );
+          receiver,
+          filter,
+          exported ? Context.RECEIVER_EXPORTED : Context.RECEIVER_NOT_EXPORTED);
     } else {
       context.registerReceiver(receiver, filter);
     }
@@ -122,10 +119,25 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
   }
 
   public static void handleIntent(Intent intent) {
-    wxApi.handleIntent(intent, instance);
+    if (registered) {
+      wxApi.handleIntent(intent, instance);
+    }
+  }
+
+  public static void registerWechatAPI(String appId) {
+    if (registered) {
+      return;
+    }
+    registered = true;
+
+    wxApi = WXAPIFactory.createWXAPI(reactContext, appId, true);
+    wxApi.registerApp(appId);
   }
 
   public void registerApp(ReadableMap request) {
+    if (registered) {
+      return;
+    }
     appid = request.getString("appid");
     registered = true;
 
@@ -188,16 +200,14 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
           public void onResponse(@NonNull File downloadedFile) {
             try {
               Uri contentUri = FileProvider.getUriForFile(
-                      reactContext,
-                      reactContext.getPackageName() + ".nativewechat.fileprovider",
-                      downloadedFile
-              );
+                  reactContext,
+                  reactContext.getPackageName() + ".nativewechat.fileprovider",
+                  downloadedFile);
 
               reactContext.grantUriPermission(
-                      "com.tencent.mm",
-                      contentUri,
-                      Intent.FLAG_GRANT_READ_URI_PERMISSION
-              );
+                  "com.tencent.mm",
+                  contentUri,
+                  Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
               WXImageObject imgObj = new WXImageObject();
               imgObj.imagePath = contentUri.toString();
@@ -225,9 +235,10 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
               }
 
             } catch (IllegalArgumentException iae) {
-               callback.invoke(true, "FileProvider URI generation failed: " + iae.getMessage() + ". Ensure 'shareData' is configured in file_provider_paths.xml.");
+              callback.invoke(true, "FileProvider URI generation failed: " + iae.getMessage()
+                  + ". Ensure 'shareData' is configured in file_provider_paths.xml.");
             } catch (Exception e) {
-               callback.invoke(true, "FileProvider sharing failed: " + e.getMessage());
+              callback.invoke(true, "FileProvider sharing failed: " + e.getMessage());
             }
           }
         });
@@ -251,9 +262,9 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
 
           Bitmap thumbBitmap = NativeWechatUtils.compressImage(bitmap, 128);
           if (thumbBitmap != null) {
-             msg.thumbData = NativeWechatUtils.bmpToByteArray(thumbBitmap, true);
+            msg.thumbData = NativeWechatUtils.bmpToByteArray(thumbBitmap, true);
           } else {
-             msg.thumbData = null;
+            msg.thumbData = null;
           }
 
           SendMessageToWX.Req req = new SendMessageToWX.Req();
@@ -261,9 +272,9 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
           req.scene = scene;
 
           if (!wxApi.sendReq(req)) {
-             callback.invoke(true, "Failed to send fallback share request to WeChat.");
+            callback.invoke(true, "Failed to send fallback share request to WeChat.");
           } else {
-             callback.invoke((Object) null);
+            callback.invoke((Object) null);
           }
         }
       });
@@ -291,7 +302,7 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
     BitmapDownload onCoverDownloaded = (bitmap) -> {
       if (bitmap != null) {
         msg.thumbData = NativeWechatUtils.bmpToByteArray(NativeWechatUtils.compressImage(bitmap, 128),
-          true);
+            true);
       }
 
       SendMessageToWX.Req req = new SendMessageToWX.Req();
@@ -335,7 +346,7 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
     BitmapDownload onCoverDownloaded = (bitmap) -> {
       if (bitmap != null) {
         msg.thumbData = NativeWechatUtils.bmpToByteArray(NativeWechatUtils.compressImage(bitmap, 128),
-          true);
+            true);
       }
 
       SendMessageToWX.Req req = new SendMessageToWX.Req();
@@ -387,7 +398,7 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
     BitmapDownload onCoverDownloaded = (bitmap) -> {
       if (bitmap != null) {
         msg.thumbData = NativeWechatUtils.bmpToByteArray(NativeWechatUtils.compressImage(bitmap, 128),
-          true);
+            true);
       }
 
       SendMessageToWX.Req req = new SendMessageToWX.Req();
@@ -475,7 +486,7 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
     WritableMap convertedData = NativeWechatRespDataHelper.downcastResp(baseResp);
 
     reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-      .emit("NativeWechat_Response", convertedData);
+        .emit("NativeWechat_Response", convertedData);
   }
 
   interface BitmapDownload {
@@ -483,7 +494,8 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
   }
 
   private boolean checkVersionValid() {
-    if (wxApi == null) return false;
+    if (wxApi == null)
+      return false;
     return wxApi.getWXAppSupportAPI() >= 0x27000D00;
   }
 

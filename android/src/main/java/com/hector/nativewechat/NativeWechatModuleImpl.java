@@ -124,13 +124,13 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
     }
   }
 
-  public static void registerWechatAPI(String appId) {
+  public static void registerWechatAPI(Context context, String appId) {
     if (registered) {
       return;
     }
     registered = true;
 
-    wxApi = WXAPIFactory.createWXAPI(reactContext, appId, true);
+    wxApi = WXAPIFactory.createWXAPI(context, appId, true);
     wxApi.registerApp(appId);
   }
 

@@ -1,4 +1,4 @@
-import {NativeEventEmitter} from 'react-native';
+import {NativeEventEmitter, DeviceEventEmitter} from 'react-native';
 import Notification from './notification';
 import {promisifyNativeFunction} from './utils';
 import {
@@ -7,6 +7,7 @@ import {
   SendAuthRequestResponse,
   LaunchMiniProgramResponse,
   UniversalLinkCheckingResponse,
+  nativeWechatReqNotification,
 } from './typing';
 import NativeModule from './NativeWechat';
 export * from './hooks';
@@ -14,6 +15,8 @@ export * from './hooks';
 const notification = new Notification();
 
 let registered = false;
+let responseListener: any = null;
+let requestListener: any = null;
 
 const generateError = (response: NativeWechatResponse) =>
   new Error(`[Native Wechat]: (${response.errorCode}) ${response.errorStr}`);
@@ -43,9 +46,19 @@ export const registerApp = (request: {
     registered = true;
   }
 
+  // Remove existing listeners to prevent duplicates
+  if (responseListener) {
+    responseListener.remove();
+    responseListener = null;
+  }
+  if (requestListener) {
+    requestListener.remove();
+    requestListener = null;
+  }
+
   const nativeEmitter = new NativeEventEmitter(NativeModule);
 
-  const listener = nativeEmitter.addListener(
+  responseListener = nativeEmitter.addListener(
     'NativeWechat_Response',
     (response: NativeWechatResponse) => {
       const error = response.errorCode ? generateError(response) : null;
@@ -54,7 +67,25 @@ export const registerApp = (request: {
     },
   );
 
-  return () => listener.remove();
+  requestListener = nativeEmitter.addListener(
+    'NativeWechat_Req',
+    (response: NativeWechatResponse) => {
+      console.log('🚀 ~ registerApp ~ requestListener - response:', response);
+
+      DeviceEventEmitter.emit(nativeWechatReqNotification, {response});
+    },
+  );
+
+  return () => {
+    if (responseListener) {
+      responseListener.remove();
+      responseListener = null;
+    }
+    if (requestListener) {
+      requestListener.remove();
+      requestListener = null;
+    }
+  };
 };
 
 export const isWechatInstalled = () => {

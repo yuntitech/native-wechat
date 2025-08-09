@@ -16,6 +16,7 @@ import android.net.Uri;
 import java.io.File;
 import java.util.UUID;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReadableMap;
@@ -28,6 +29,7 @@ import com.tencent.mm.opensdk.modelbiz.WXLaunchMiniProgram;
 import com.tencent.mm.opensdk.modelbiz.WXOpenCustomerServiceChat;
 import com.tencent.mm.opensdk.modelmsg.SendAuth;
 import com.tencent.mm.opensdk.modelmsg.SendMessageToWX;
+import com.tencent.mm.opensdk.modelmsg.ShowMessageFromWX;
 import com.tencent.mm.opensdk.modelmsg.WXImageObject;
 import com.tencent.mm.opensdk.modelmsg.WXMediaMessage;
 import com.tencent.mm.opensdk.modelmsg.WXMiniProgramObject;
@@ -468,6 +470,15 @@ public class NativeWechatModuleImpl implements IWXAPIEventHandler {
 
   @Override
   public void onReq(BaseReq req) {
+    if (req instanceof ShowMessageFromWX.Req) {
+      ShowMessageFromWX.Req showReq = (ShowMessageFromWX.Req) req;
+      String messageExt = showReq.message.messageExt;
+      WritableMap data = Arguments.createMap();
+      data.putString("type", "LaunchFromWXReq");
+      data.putString("data", messageExt);
+      reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+      .emit("NativeWechat_Req", data);
+    }
   }
 
   @Override

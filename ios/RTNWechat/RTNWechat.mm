@@ -377,13 +377,23 @@ RCT_EXPORT_METHOD(openCustomerService:
 
 - (NSArray<NSString *> *)supportedEvents
 {
-  return @[@"NativeWechat_Response"];
+  return @[@"NativeWechat_Response", @"NativeWechat_Req"];
 }
 
 - (void)onResp:(BaseResp *)baseResp{
     NSDictionary* convertedData = [RTNWechatRespDataHelper downcastResp:baseResp];
     
     [self sendEventWithName:@"NativeWechat_Response" body:convertedData];
+}
+
+- (void)onReq:(BaseReq *)req {
+    if ([req isKindOfClass:[LaunchFromWXReq class]]) {
+        LaunchFromWXReq *launchReq = (LaunchFromWXReq *)req;
+        NSString *messageExt = launchReq.message.messageExt;
+       if (hasListeners) {
+           [self sendEventWithName:@"NativeWechat_Req" body:@{@"type": @"LaunchFromWXReq", @"data": messageExt}];
+       }
+   }
 }
 
 - (void)startObserving

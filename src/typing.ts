@@ -38,3 +38,6 @@ export type WechatMiniprogramType = {
 
 export type NativeWechatModuleConstants = WechatShareScene &
   WechatMiniprogramType;
+
+export const nativeWechatReqNotification =
+  'cn.bookln.nativeWechat.NativeWechat_Req';
